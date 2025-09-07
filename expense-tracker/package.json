@@ -1,0 +1,35 @@
+{
+  "name": "expense-tracker",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@aws-sdk/client-s3": "^3.879.0",
+    "@aws-sdk/s3-request-presigner": "^3.879.0",
+    "@aws-sdk/types": "^3.862.0",
+    "@aws-sdk/util-create-request": "^3.879.0",
+    "@aws-sdk/util-format-url": "^3.873.0",
+    "axios": "^1.11.0",
+    "bcrypt": "^6.0.0",
+    "bcryptjs": "^3.0.2",
+    "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
+    "exceljs": "^4.4.0",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "jspdf": "^3.0.2",
+    "jspdf-autotable": "^5.0.2",
+    "morgan": "^1.10.1",
+    "mysql2": "^3.14.4",
+    "pdfkit-table": "^0.1.99",
+    "sequelize": "^6.37.7",
+    "uuid": "^11.1.0"
+  }
+}

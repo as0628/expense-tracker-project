@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Premium Expense Tracker</title>
+  <link rel="stylesheet" href="premiumexpense.css" />
+</head>
+<body>
+  <div id="expense-container">
+    <h1>Expense Tracker</h1>
+
+    
+    <div class="top-bar">
+      <div class="right-controls">
+        <div class="premium-badge">You are a Premium User </div>
+        <button id="show-leaderboard-btn">Show Leaderboard</button>
+        <button class="logout-btn" id="logout-btn">Logout</button>
+      </div>
+    </div>
+
+    <!-- Add Expense -->
+    <div class="card">
+  <h3>Add Expense</h3>
+  <form id="expense-form" class="expense-form-layout">
+    <div class="expense-row">
+      <input type="number" id="amount" class="form-input" placeholder="Amount" required />
+      <input type="text" id="description" class="form-input" placeholder="Description" required />
+      <select id="category" class="form-input" required>
+        <option value="">Select Category</option>
+        <option value="Food">Food</option>
+        <option value="Petrol">Petrol</option>
+        <option value="Salary">Salary</option>
+        <option value="Others">Others</option>
+      </select>
+      <select id="type" class="form-input" required>
+        <option value="">Select Type</option>
+        <option value="expense">Expense</option>
+        <option value="income">Income</option>
+      </select>
+       <input type="text" id="note" class="form-input" placeholder="Note (optional)" />
+      <button type="submit" class="add-btn">Add Expense</button>
+    </div>
+  </form>
+</div>
+
+
+    <div class="grid">
+      <!-- Expense List -->
+      <div class="card">
+        <h3>Expense List</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>Amount</th>
+              <th>Description</th>
+              <th>Category</th>
+              <th>Type</th>
+              <th>Note</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="expense-body"></tbody>
+        </table>
+          <div class="pagination-controls">
+  <label for="pageSizeSelect">Items per page:</label>
+  <select id="pageSizeSelect">
+    <option value="3">3</option>
+    <option value="10" selected>10</option>
+    <option value="20">20</option>
+    <option value="40">40</option>
+  </select>
+</div>
+
+<div class="pagination" id="pagination"></div>
+      </div>
+
+      <!-- Expense Reports -->
+      <div class="card">
+        <h3>Expense Reports</h3>
+        <div class="report-buttons">
+          <button class="btn-secondary" onclick="loadReport('daily')">Daily</button>
+          <button class="btn-secondary" onclick="loadReport('weekly')">Weekly</button>
+          <button class="btn-secondary" onclick="loadReport('monthly')">Monthly</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Date/Period</th>
+              <th>Total Income</th>
+              <th>Total Expense</th>
+            </tr>
+          </thead>
+          <tbody id="report-body"></tbody>
+        </table>
+        
+        <button id="download-btn" class="download-btn" disabled>⬇ Download Report</button>
+        
+<h3>Export History</h3>
+<table id="history-section" class="hidden">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Generated At</th>
+      <th>Download</th>
+    </tr>
+  </thead>
+  <tbody id="history-body"></tbody>
+</table>
+
+<!-- Pagination controls for history -->
+<div class="pagination-controls hidden" id="history-pagination-container">
+  <label for="historyPageSizeSelect">Items per page:</label>
+  <select id="historyPageSizeSelect">
+    <option value="3">3</option>
+    <option value="5" selected>5</option>
+    <option value="10">10</option>
+  </select>
+</div>
+<div id="history-pagination" class="pagination"></div><br/>
+
+
+<button id="toggle-history-btn">Show History</button>
+
+
+      </div>
+    </div>
+
+    <!-- Leaderboard -->
+    <!-- Leaderboard -->
+<div class="card hidden" id="leaderboard-section">
+  <h3>Leaderboard</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Rank</th>
+        <th>User</th>
+        <th>Total Expense</th>
+      </tr>
+    </thead>
+    <tbody id="leaderboard-body"></tbody>
+  </table>
+
+  <!-- Leaderboard Pagination -->
+  <div class="leaderboard-footer" style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
+    <!-- Items per page (default 10) -->
+    <div class="pagination-controls">
+      <label for="leaderboardPageSize">Items per page:</label>
+      <select id="leaderboardPageSize">
+        <option value="5">5</option>
+        <option value="10" selected>10</option>
+        <option value="20">20</option>
+        <option value="40">40</option>
+      </select>
+    </div>
+
+    <!-- Page navigation buttons -->
+    <div class="pagination" id="leaderboard-pagination"></div>
+  </div>
+</div>
+
+
+  <script src="premiumexpense.js"></script>
+<script>
+   document.addEventListener("DOMContentLoaded", () => {
+    const logoutBtn = document.getElementById("logout-btn");
+    console.log("Logout button element:", logoutBtn);
+
+    if (logoutBtn) {
+      logoutBtn.addEventListener("click", () => {
+        console.log("Logout clicked!");
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+       // alert("You are logged out!");
+        window.location.href = "login.html";  
+      });
+    } else {
+      console.error(" Logout button not found in DOM");
+    }
+  
+
+    if (leaderboardBtn) {
+      leaderboardBtn.addEventListener("click", () => {
+        leaderboardSection.classList.toggle("hidden");
+        leaderboardBtn.textContent = leaderboardSection.classList.contains("hidden")
+          ? "Show Leaderboard"
+          : "Hide Leaderboard";
+      });
+    }
+  });
+</script>
+
+</body>
+</html>
