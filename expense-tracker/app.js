@@ -27,6 +27,7 @@ app.use(morgan("combined", { stream: accessLogStream }));
 app.use(express.static(path.join(__dirname, "public"))); // Serve /public as root
 
 
+app.use("/exports", express.static(path.join(__dirname, "exports")));
 
 // Routes
 app.use("/api/auth", signupRoutes);

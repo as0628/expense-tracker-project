@@ -1,6 +1,6 @@
 const ExcelJS = require("exceljs");
 const db = require("../config/db");
-const { uploadToS3 } = require("../utils/s3");
+//const { uploadToS3 } = require("../utils/s3");
 const fs = require("fs");
 const path = require("path");
 
@@ -194,29 +194,28 @@ const getReport = async (req, res) => {
     if (period === "daily") {
       query = `
         SELECT 
-          'Today' AS period,
           SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) AS total_income,
           SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) AS total_expense
         FROM expenses
         WHERE user_id = ? AND DATE(created_at) = CURDATE();
       `;
-    } else if (period === "weekly") {
-      query = `
-        SELECT 
-          'This Week' AS period,
-          SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) AS total_income,
-          SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) AS total_expense
-        FROM expenses
-        WHERE user_id = ? AND YEARWEEK(created_at, 1) = YEARWEEK(CURDATE(), 1);
-      `;
     } else if (period === "monthly") {
       query = `
         SELECT 
-          'This Month' AS period,
           SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) AS total_income,
           SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) AS total_expense
         FROM expenses
-        WHERE user_id = ? AND MONTH(created_at) = MONTH(CURDATE()) 
+        WHERE user_id = ? 
+          AND MONTH(created_at) = MONTH(CURDATE())
+          AND YEAR(created_at) = YEAR(CURDATE());
+      `;
+    } else if (period === "yearly") {
+      query = `
+        SELECT 
+          SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) AS total_income,
+          SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) AS total_expense
+        FROM expenses
+        WHERE user_id = ? 
           AND YEAR(created_at) = YEAR(CURDATE());
       `;
     } else {
@@ -224,29 +223,29 @@ const getReport = async (req, res) => {
     }
 
     const [rows] = await db.query(query, [userId]);
+    const data = rows[0] || { total_income: 0, total_expense: 0 };
+    const balance = (data.total_income || 0) - (data.total_expense || 0);
 
-    res.json(rows.length > 0 ? rows : [{ period, total_income: 0, total_expense: 0 }]);
+    res.json({ ...data, balance });
   } catch (err) {
     console.error("Report query error:", err);
     res.status(500).json({ error: "Failed to generate report" });
   }
 };
-
 // ================= Download Report (Excel) =================
+
+
 const downloadReport = async (req, res) => {
   try {
     if (!req.user.isPremium) {
       return res.status(401).json({ error: "Unauthorized - Premium users only" });
     }
 
-    const { period } = req.query;
     const userId = req.user.id;
 
-    console.log("Generating Excel Report for user:", userId, "period:", period);
-
+    // ================= Fetch Data =================
     const [rows] = await db.query(
-      `SELECT 
-         id, amount, description, category, type, note, created_at AS date
+      `SELECT id, amount, description, category, type, note, created_at AS date
        FROM expenses
        WHERE user_id = ?
        ORDER BY created_at ASC`,
@@ -273,8 +272,10 @@ const downloadReport = async (req, res) => {
       [userId]
     );
 
+    // ================= Build Workbook =================
     const workbook = new ExcelJS.Workbook();
 
+    // ---- Sheet 1: Detailed Expenses ----
     const sheet1 = workbook.addWorksheet("Detailed Expenses");
     sheet1.columns = [
       { header: "Date", key: "date", width: 15 },
@@ -306,6 +307,7 @@ const downloadReport = async (req, res) => {
       savings: totalIncome - totalExpense,
     });
 
+    // ---- Sheet 2: Yearly Summary ----
     const sheet2 = workbook.addWorksheet("Yearly Summary");
     sheet2.columns = [
       { header: "Month", key: "month", width: 20 },
@@ -331,6 +333,7 @@ const downloadReport = async (req, res) => {
       savings: yearlyIncome - yearlyExpense,
     });
 
+    // ---- Sheet 3: Notes ----
     const sheet3 = workbook.addWorksheet("Yearly Notes");
     sheet3.columns = [
       { header: "Date", key: "date", width: 20 },
@@ -347,25 +350,45 @@ const downloadReport = async (req, res) => {
       sheet3.addRow({ date: "—", note: "No notes found" });
     }
 
-    const buffer = await workbook.xlsx.writeBuffer();
-    const fileKey = `reports/user-${userId}-${Date.now()}.xlsx`;
-    const url = await uploadToS3(
-      buffer,
-      fileKey,
-      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-    );
+    // ================= Save Locally (for history) =================
+    const exportDir = path.join(__dirname, "../exports");
+    if (!fs.existsSync(exportDir)) {
+      fs.mkdirSync(exportDir);
+    }
+
+    const fileName = `expense-report-${Date.now()}.xlsx`;
+    const filePath = path.join(exportDir, fileName);
+
+    await workbook.xlsx.writeFile(filePath);
+
+    // ================= Save History Record =================
+    const s3Key = `reports/${fileName}`;        // future S3 key
+    const fileUrl = `/exports/${fileName}`;     // local URL (can serve this statically)
 
     await db.query(
       "INSERT INTO export_history (user_id, s3_key, url) VALUES (?, ?, ?)",
-      [userId, fileKey, url]
+      [userId, s3Key, fileUrl]
     );
 
-    res.json({ fileUrl: url });
+    // ================= Also Download to Browser =================
+    res.setHeader(
+      "Content-Type",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+    );
+    res.setHeader(
+      "Content-Disposition",
+      `attachment; filename=${fileName}`
+    );
+
+    await workbook.xlsx.write(res);
+    res.end();
+
   } catch (err) {
     console.error("Unexpected error in downloadReport:", err);
     res.status(500).json({ error: "Unexpected error" });
   }
 };
+
 
 // ================= Export History =================
 const getExportHistory = async (req, res) => {

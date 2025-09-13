@@ -1,55 +1,112 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Premium Expense Tracker</title>
-  <link rel="stylesheet" href="premiumexpense.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Day to Day Expenses (Premium)</title>
+  <link rel="stylesheet" href="premiumexpense.css">
+
+  <style>
+    .notification {
+      display: none;
+      position: fixed;
+      top: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #f44336;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 6px;
+      font-size: 15px;
+      font-weight: bold;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+      z-index: 3000;
+      animation: fadeInDown 0.4s ease;
+    }
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translate(-50%, -30px); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
+    .hidden { display: none; }
+    .pagination button.active-page { font-weight: bold; background: #4caf50; color: white; }
+  </style>
 </head>
 <body>
-  <div id="expense-container">
-    <h1>Expense Tracker</h1>
 
-    
-    <div class="top-bar">
-      <div class="right-controls">
-        <div class="premium-badge">You are a Premium User </div>
-        <button id="show-leaderboard-btn">Show Leaderboard</button>
-        <button class="logout-btn" id="logout-btn">Logout</button>
+  <!-- Notification -->
+  <div id="notification" class="notification">Buy Premium to use this feature!</div>
+
+  <!-- Header -->
+  <header class="header">
+    <h1 class="logo">Day to Day Expenses</h1>
+    <nav class="nav">
+      <div class="premium-badge">You are a Premium User</div>
+      <button id="download-btn" class="action-btn" disabled>⬇ Download Report</button>
+      <button id="show-leaderboard-btn" class="action-btn">Show Leaderboard</button>
+      <a href="home.html" class="auth-btn">Logout</a>
+    </nav>
+  </header>
+
+  <!-- Tabs -->
+  <div class="tabs">
+    <button onclick="toggleReport('daily')">Daily</button>
+    <button onclick="toggleReport('monthly')">Monthly</button>
+    <button onclick="toggleReport('yearly')">Yearly</button>
+    <button onclick="toggleReportTable()">Report List</button>
+  </div>
+
+  <!-- Report Table -->
+  <div id="report-section" class="report-section hidden">
+    <table id="report-table">
+      <thead>
+        <tr>
+          <th>Date/Period</th>
+          <th>Total Income</th>
+          <th>Total Expense</th>
+        </tr>
+      </thead>
+      <tbody id="report-body"></tbody>
+    </table>
+  </div>
+
+  <!-- Date & Balance -->
+  <div class="date-balance">
+    <p id="today-date"></p>
+    <p class="balance">Balance: Rs.<span id="balance">0.00</span></p>
+  </div>
+
+  <!-- Confirm Modal -->
+  <div id="confirmModal" class="modal hidden">
+    <div class="modal-content">
+      <p>Are you sure you want to delete this expense?</p>
+      <div class="modal-actions">
+        <button id="confirmYes" class="yes-btn">Yes</button>
+        <button id="confirmNo" class="no-btn">No</button>
       </div>
     </div>
+  </div>
 
-    <!-- Add Expense -->
-    <div class="card">
-  <h3>Add Expense</h3>
-  <form id="expense-form" class="expense-form-layout">
-    <div class="expense-row">
-      <input type="number" id="amount" class="form-input" placeholder="Amount" required />
-      <input type="text" id="description" class="form-input" placeholder="Description" required />
-      <select id="category" class="form-input" required>
-        <option value="">Select Category</option>
-        <option value="Food">Food</option>
-        <option value="Petrol">Petrol</option>
-        <option value="Salary">Salary</option>
-        <option value="Others">Others</option>
-      </select>
-      <select id="type" class="form-input" required>
-        <option value="">Select Type</option>
-        <option value="expense">Expense</option>
-        <option value="income">Income</option>
-      </select>
-       <input type="text" id="note" class="form-input" placeholder="Note (optional)" />
-      <button type="submit" class="add-btn">Add Expense</button>
-    </div>
-  </form>
-</div>
+  <!-- Income & Expense Cards -->
+  <div class="card">
+    <h3>Income (Credit)</h3>
+    <p>Rs.<span id="total-income">0.00</span></p>
+  </div>
+  <div class="card">
+    <h3>Expense (Debit)</h3>
+    <p>Rs.<span id="total-expense">0.00</span></p>
+  </div>
 
+  <!-- Expense + Download Section (side by side) -->
+  <div class="expense-sections">
+    
+    <!-- Expense List -->
+    <div class="expense-list">
+      <h3>Expense List</h3>
+      <!-- Show/Hide button -->
+      <button id="toggle-expense-btn" class="action-btn">Show Expense List</button>
 
-    <div class="grid">
-      <!-- Expense List -->
-      <div class="card">
-        <h3>Expense List</h3>
-        <table>
+      <div id="expense-section" class="hidden">
+        <table id="expense-table">
           <thead>
             <tr>
               <th>Amount</th>
@@ -62,133 +119,143 @@
           </thead>
           <tbody id="expense-body"></tbody>
         </table>
-          <div class="pagination-controls">
-  <label for="pageSizeSelect">Items per page:</label>
-  <select id="pageSizeSelect">
-    <option value="3">3</option>
-    <option value="10" selected>10</option>
-    <option value="20">20</option>
-    <option value="40">40</option>
-  </select>
-</div>
-
-<div class="pagination" id="pagination"></div>
-      </div>
-
-      <!-- Expense Reports -->
-      <div class="card">
-        <h3>Expense Reports</h3>
-        <div class="report-buttons">
-          <button class="btn-secondary" onclick="loadReport('daily')">Daily</button>
-          <button class="btn-secondary" onclick="loadReport('weekly')">Weekly</button>
-          <button class="btn-secondary" onclick="loadReport('monthly')">Monthly</button>
+        <div class="pagination-controls">
+          <label for="pageSizeSelect">Items per page:</label>
+          <select id="pageSizeSelect">
+            <option value="3">3</option>
+            <option value="10" selected>10</option>
+            <option value="20">20</option>
+            <option value="40">40</option>
+          </select>
         </div>
-        <table>
+        <div id="pagination" class="pagination"></div>
+      </div>
+    </div>
+
+    <!-- Export History -->
+    <div class="export-history">
+      <h3>Download List</h3>
+      <button id="toggle-history-btn" class="action-btn">Show History</button>
+      <div id="history-section" class="hidden">
+        <table id="export-history-table">
           <thead>
             <tr>
-              <th>Date/Period</th>
-              <th>Total Income</th>
-              <th>Total Expense</th>
+              <th>#</th>
+              <th>Created At</th>
+              <th>Download</th>
             </tr>
           </thead>
-          <tbody id="report-body"></tbody>
+          <tbody id="export-history"></tbody>
         </table>
-        
-        <button id="download-btn" class="download-btn" disabled>⬇ Download Report</button>
-        
-<h3>Export History</h3>
-<table id="history-section" class="hidden">
-  <thead>
-    <tr>
-      <th>#</th>
-      <th>Generated At</th>
-      <th>Download</th>
-    </tr>
-  </thead>
-  <tbody id="history-body"></tbody>
-</table>
-
-<!-- Pagination controls for history -->
-<div class="pagination-controls hidden" id="history-pagination-container">
-  <label for="historyPageSizeSelect">Items per page:</label>
-  <select id="historyPageSizeSelect">
-    <option value="3">3</option>
-    <option value="5" selected>5</option>
-    <option value="10">10</option>
-  </select>
-</div>
-<div id="history-pagination" class="pagination"></div><br/>
-
-
-<button id="toggle-history-btn">Show History</button>
-
-
+        <div class="pagination-controls">
+          <label for="historyPageSizeSelect">Items per page:</label>
+          <select id="historyPageSizeSelect">
+            <option value="3">3</option>
+            <option value="5" selected>5</option>
+            <option value="10">10</option>
+          </select>
+        </div>
+        <div id="history-pagination" class="pagination"></div>
       </div>
     </div>
-
-    <!-- Leaderboard -->
-    <!-- Leaderboard -->
-<div class="card hidden" id="leaderboard-section">
-  <h3>Leaderboard</h3>
-  <table>
-    <thead>
-      <tr>
-        <th>Rank</th>
-        <th>User</th>
-        <th>Total Expense</th>
-      </tr>
-    </thead>
-    <tbody id="leaderboard-body"></tbody>
-  </table>
-
-  <!-- Leaderboard Pagination -->
-  <div class="leaderboard-footer" style="display: flex; justify-content: space-between; align-items: center; margin-top: 10px;">
-    <!-- Items per page (default 10) -->
-    <div class="pagination-controls">
-      <label for="leaderboardPageSize">Items per page:</label>
-      <select id="leaderboardPageSize">
-        <option value="5">5</option>
-        <option value="10" selected>10</option>
-        <option value="20">20</option>
-        <option value="40">40</option>
-      </select>
-    </div>
-
-    <!-- Page navigation buttons -->
-    <div class="pagination" id="leaderboard-pagination"></div>
   </div>
-</div>
 
+  <!-- Leaderboard -->
+  <div id="leaderboard-section" class="card hidden">
+    <h3>Leaderboard</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Rank</th>
+          <th>User</th>
+          <th>Total Expense</th>
+        </tr>
+      </thead>
+      <tbody id="leaderboard-body"></tbody>
+    </table>
+    <div class="leaderboard-footer">
+      <div class="pagination-controls">
+        <label for="leaderboardPageSize">Items per page:</label>
+        <select id="leaderboardPageSize">
+          <option value="5">5</option>
+          <option value="10" selected>10</option>
+          <option value="20">20</option>
+          <option value="40">40</option>
+        </select>
+      </div>
+      <div id="leaderboard-pagination" class="pagination"></div>
+    </div>
+  </div>
+
+  <!-- Floating Add Button -->
+  <button class="add-btn" onclick="openPopup()">+</button>
+
+  <!-- Popup Form -->
+  <div class="popup hidden" id="popup-form">
+    <div class="popup-content">
+      <h2>Add Expense</h2>
+      <form id="expense-form">
+        <label>Amount</label>
+        <input type="number" id="amount" placeholder="Enter amount" required class="form-input">
+        
+        <label>Description</label>
+        <input type="text" id="description" placeholder="Enter description" required class="form-input">
+        
+        <label>Category</label>
+        <select id="category" required class="form-input">
+          <option value="">Select Category</option>
+          <option value="Food">Food</option>
+          <option value="Petrol">Petrol</option>
+          <option value="Salary">Salary</option>
+          <option value="Others">Others</option>
+        </select>
+        
+        <label>Type</label>
+        <select id="type" class="form-input" required>
+          <option value="">Select Type</option>
+          <option value="expense">Expense</option>
+          <option value="income">Income</option>
+        </select>
+        
+        <label>Note (Optional)</label>
+        <input type="text" id="note" placeholder="Add a note" class="form-input">
+        
+        <button type="submit" class="submit-btn">Add Expense</button>
+      </form>
+    </div>
+  </div>
+
+  <!-- JS Scripts -->
+  <script>
+    // Show today’s date
+    const today = new Date();
+    const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+    document.getElementById("today-date").textContent = today.toLocaleDateString('en-UK', options);
+
+    // Popup open/close
+    function openPopup() {
+      document.getElementById("popup-form").classList.remove("hidden");
+    }
+    window.onclick = function(event) {
+      const popup = document.getElementById("popup-form");
+      if (event.target === popup) {
+        popup.classList.add("hidden");
+      }
+    }
+
+    // Toggle Expense List
+    document.getElementById("toggle-expense-btn").addEventListener("click", function () {
+      const section = document.getElementById("expense-section");
+      if (section.classList.contains("hidden")) {
+        section.classList.remove("hidden");
+        this.textContent = "Hide Expense List";
+      } else {
+        section.classList.add("hidden");
+        this.textContent = "Show Expense List";
+      }
+    });
+  </script>
 
   <script src="premiumexpense.js"></script>
-<script>
-   document.addEventListener("DOMContentLoaded", () => {
-    const logoutBtn = document.getElementById("logout-btn");
-    console.log("Logout button element:", logoutBtn);
-
-    if (logoutBtn) {
-      logoutBtn.addEventListener("click", () => {
-        console.log("Logout clicked!");
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-       // alert("You are logged out!");
-        window.location.href = "login.html";  
-      });
-    } else {
-      console.error(" Logout button not found in DOM");
-    }
-  
-
-    if (leaderboardBtn) {
-      leaderboardBtn.addEventListener("click", () => {
-        leaderboardSection.classList.toggle("hidden");
-        leaderboardBtn.textContent = leaderboardSection.classList.contains("hidden")
-          ? "Show Leaderboard"
-          : "Hide Leaderboard";
-      });
-    }
-  });
-</script>
-
 </body>
 </html>

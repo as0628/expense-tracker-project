@@ -1,6 +1,6 @@
 const db = require("../config/db");
 
-// Helper: update total_expense
+// Helper: update total_expense (only for expense type)
 async function updateTotalExpense(userId, difference) {
   await db.query(
     "UPDATE signup SET total_expense = total_expense + ? WHERE id = ?",
@@ -8,7 +8,7 @@ async function updateTotalExpense(userId, difference) {
   );
 }
 
-// ✅ Get all expenses (no pagination)
+// ✅ Get all expenses
 const getExpenses = async (req, res) => {
   const userId = req.user.id;
 
@@ -17,35 +17,39 @@ const getExpenses = async (req, res) => {
       "SELECT * FROM expenses WHERE user_id = ? ORDER BY created_at DESC",
       [userId]
     );
-
-    res.json(rows); // ✅ return array directly
+    res.json(rows);
   } catch (err) {
     console.error("Error fetching expenses:", err);
     res.status(500).json({ error: "Database error while fetching expenses" });
   }
 };
 
-// ✅ Add expense
+// ✅ Add expense (now includes type)
 const addExpense = async (req, res) => {
-  const { amount, description, category, note } = req.body;
+  const { amount, description, category, type, note } = req.body;
   const userId = req.user.id;
 
-  if (!amount || !description || !category) {
-    return res.status(400).json({ error: "Amount, description, and category are required" });
+  if (!amount || !description || !category || !type) {
+    return res.status(400).json({ error: "Amount, description, category and type are required" });
   }
   if (isNaN(amount)) {
     return res.status(400).json({ error: "Amount must be a number" });
   }
+  if (type !== "income" && type !== "expense") {
+    return res.status(400).json({ error: "Type must be income or expense" });
+  }
 
   try {
     const [result] = await db.query(
-      "INSERT INTO expenses (amount, description, category, note, user_id) VALUES (?, ?, ?, ?, ?)",
-      [amount, description, category, note || null, userId]
+      "INSERT INTO expenses (amount, description, category, type, note, user_id) VALUES (?, ?, ?, ?, ?, ?)",
+      [amount, description, category, type, note || null, userId]
     );
 
-    await updateTotalExpense(userId, amount);
+    if (type === "expense") {
+      await updateTotalExpense(userId, amount);
+    }
 
-    res.status(201).json({ message: "Expense added", expenseId: result.insertId });
+    res.status(201).json({ message: `${type} added`, expenseId: result.insertId });
   } catch (err) {
     console.error("Error adding expense:", err);
     res.status(500).json({ error: "Database error while adding expense" });
@@ -55,7 +59,7 @@ const addExpense = async (req, res) => {
 // ✅ Update expense
 const updateExpense = async (req, res) => {
   const { id } = req.params;
-  const { amount, description, category, note } = req.body;
+  const { amount, description, category,type, note } = req.body;
   const userId = req.user.id;
 
   if (isNaN(amount)) {
@@ -76,8 +80,8 @@ const updateExpense = async (req, res) => {
     const difference = amount - oldAmount;
 
     const [result] = await db.query(
-      "UPDATE expenses SET amount = ?, description = ?, category = ?, note = ? WHERE id = ? AND user_id = ?",
-      [amount, description, category, note || null, id, userId]
+      "UPDATE expenses SET amount = ?, description = ?, category = ?,type = ?, note = ? WHERE id = ? AND user_id = ?",
+      [amount, description, category,type, note || null, id, userId]
     );
 
     if (result.affectedRows === 0) {
@@ -100,7 +104,7 @@ const deleteExpense = async (req, res) => {
 
   try {
     const [rows] = await db.query(
-      "SELECT amount FROM expenses WHERE id = ? AND user_id = ?",
+      "SELECT amount, type FROM expenses WHERE id = ? AND user_id = ?",
       [id, userId]
     );
 
@@ -108,7 +112,7 @@ const deleteExpense = async (req, res) => {
       return res.status(404).json({ error: "Expense not found" });
     }
 
-    const amount = rows[0].amount;
+    const { amount, type } = rows[0];
 
     const [result] = await db.query(
       "DELETE FROM expenses WHERE id = ? AND user_id = ?",
@@ -119,7 +123,9 @@ const deleteExpense = async (req, res) => {
       return res.status(404).json({ error: "Expense not found" });
     }
 
-    await updateTotalExpense(userId, -amount);
+    if (type === "expense") {
+      await updateTotalExpense(userId, -amount);
+    }
 
     res.json({ message: "Expense deleted" });
   } catch (err) {
@@ -128,4 +134,59 @@ const deleteExpense = async (req, res) => {
   }
 };
 
-module.exports = { getExpenses, addExpense, updateExpense, deleteExpense };
+// ✅ Get report for daily / monthly / yearly
+const getReport = async (req, res) => {
+  try {
+    const { period } = req.query;
+    const userId = req.user.id;
+
+    let query = "";
+    if (period === "daily") {
+      query = `
+        SELECT 
+          SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) AS total_income,
+          SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) AS total_expense
+        FROM expenses
+        WHERE user_id = ? AND DATE(created_at) = CURDATE();
+      `;
+    } else if (period === "monthly") {
+      query = `
+        SELECT 
+          SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) AS total_income,
+          SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) AS total_expense
+        FROM expenses
+        WHERE user_id = ? 
+          AND MONTH(created_at) = MONTH(CURDATE())
+          AND YEAR(created_at) = YEAR(CURDATE());
+      `;
+    } else if (period === "yearly") {
+      query = `
+        SELECT 
+          SUM(CASE WHEN type = 'income' THEN amount ELSE 0 END) AS total_income,
+          SUM(CASE WHEN type = 'expense' THEN amount ELSE 0 END) AS total_expense
+        FROM expenses
+        WHERE user_id = ? 
+          AND YEAR(created_at) = YEAR(CURDATE());
+      `;
+    } else {
+      return res.status(400).json({ error: "Invalid period" });
+    }
+
+    const [rows] = await db.query(query, [userId]);
+    const data = rows[0] || { total_income: 0, total_expense: 0 };
+    const balance = (data.total_income || 0) - (data.total_expense || 0);
+
+    res.json({ ...data, balance });
+  } catch (err) {
+    console.error("Report query error:", err);
+    res.status(500).json({ error: "Failed to generate report" });
+  }
+};
+
+module.exports = {
+  getExpenses,
+  addExpense,
+  updateExpense,
+  deleteExpense,
+  getReport
+};
