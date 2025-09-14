@@ -1,32 +1,27 @@
-document.getElementById("forgot-form").addEventListener("submit", async (e) => {
+const form = document.getElementById("forgot-form");
+const messageDiv = document.getElementById("message");
+
+// Base URL of your server
+const BASE_URL = "http://3.109.48.147:3000";
+
+form.addEventListener("submit", (e) => {
   e.preventDefault();
 
   const email = document.getElementById("email").value.trim();
-  const messageBox = document.getElementById("message");
-
-  try {
-    const res = await fetch("http://localhost:3000/password/forgotpassword", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email }),
-    });
-
-    const data = await res.json();
-
-    if (!res.ok) {
-      messageBox.className = "error";
-      messageBox.textContent = data.error || "Something went wrong";
-      return;
-    }
-
-    messageBox.className = "success";
-    messageBox.innerHTML = `
-      <p>${data.message}</p>
-      <p>Reset Link: <a href="${data.resetUrl}" target="_blank">${data.resetUrl}</a></p>
-    `;
-  } catch (err) {
-    console.error("Error:", err);
-    messageBox.className = "error";
-    messageBox.textContent = "Failed to send reset link. Try again later.";
+  if (!email) {
+    messageDiv.textContent = "Please enter your email.";
+    messageDiv.style.color = "red";
+    return;
   }
+
+  // Generate a dummy reset ID
+  const dummyResetId = "dummy-reset-id";
+
+  // Construct the reset link
+  const resetLink = `${BASE_URL}/password/resetpassword/${dummyResetId}`;
+
+  messageDiv.innerHTML = `
+    <p style="color: green;">Reset link generated! Click below to reset your password:</p>
+    <a href="${resetLink}" style="color: blue;">${resetLink}</a>
+  `;
 });

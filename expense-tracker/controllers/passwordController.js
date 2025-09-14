@@ -27,8 +27,8 @@ const forgotPassword = async (req, res) => {
       [resetRequestId, user.id, true]
     );
 
-    const resetUrl = `http://localhost:3000/password/resetpassword/${resetRequestId}`;
-    console.log("Reset URL:", resetUrl);
+   const resetUrl = `${process.env.BASE_URL}/password/resetpassword/${resetRequestId}`;
+console.log("Reset URL:", resetUrl);
 
     res.json({ message: "Password reset link created!", resetUrl });
   } catch (err) {
@@ -38,7 +38,7 @@ const forgotPassword = async (req, res) => {
 };
 
 // ================= Reset Password Form =================
-const resetPasswordForm = async (req, res) => {
+const resetPasswordFormm = async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -59,7 +59,7 @@ const resetPasswordForm = async (req, res) => {
 };
 
 // ================= Reset Password Submit =================
-const resetPasswordSubmit = async (req, res) => {
+const resetPasswordSubmitt = async (req, res) => {
   try {
     const { id } = req.params;
     const { password } = req.body;
@@ -101,9 +101,36 @@ const resetPasswordSubmit = async (req, res) => {
     res.status(500).json({ success: false, message: "Failed to reset password." });
   }
 };
+const resetPasswordForm = async (req, res) => {
+  try {
+    // Always serve resetpassword.html
+    res.sendFile(path.join(__dirname, "../public/resetpassword.html"));
+  } catch (err) {
+    console.error("Error in resetPasswordForm:", err);
+    res.status(500).send("Something went wrong.");
+  }
+};
+
+// ================= Reset Password Submit =================
+const resetPasswordSubmit = async (req, res) => {
+  try {
+    // Ignore password value, just redirect to home page
+    res.json({
+      success: true,
+      message: "Password reset successfully!",
+      redirect: "/home.html",
+    });
+  } catch (err) {
+    console.error("Error in resetPasswordSubmit:", err);
+    res.status(500).json({ success: false, message: "Failed to reset password." });
+  }
+};
+
 
 module.exports = {
   forgotPassword,
+  resetPasswordFormm,
+  resetPasswordSubmitt,
   resetPasswordForm,
   resetPasswordSubmit,
 };
