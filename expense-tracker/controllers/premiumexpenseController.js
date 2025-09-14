@@ -1,6 +1,6 @@
 const ExcelJS = require("exceljs");
 const db = require("../config/db");
-//const { uploadToS3 } = require("../utils/s3");
+const { uploadToS3 } = require("../utils/s3");
 const fs = require("fs");
 const path = require("path");
 
@@ -241,17 +241,22 @@ const downloadReport = async (req, res) => {
       return res.status(401).json({ error: "Unauthorized - Premium users only" });
     }
 
+    const { period } = req.query;
     const userId = req.user.id;
 
-    // ================= Fetch Data =================
+    console.log("Generating Excel Report for user:", userId, "period:", period);
+
+    // === Detailed Transactions ===
     const [rows] = await db.query(
-      `SELECT id, amount, description, category, type, note, created_at AS date
+      `SELECT 
+         id, amount, description, category, type, note, created_at AS date
        FROM expenses
        WHERE user_id = ?
        ORDER BY created_at ASC`,
       [userId]
     );
 
+    // === Yearly Summary ===
     const [yearly] = await db.query(
       `SELECT 
          DATE_FORMAT(created_at, '%M %Y') AS month,
@@ -264,6 +269,7 @@ const downloadReport = async (req, res) => {
       [userId]
     );
 
+    // === Notes ===
     const [notes] = await db.query(
       `SELECT created_at AS date, note
        FROM expenses
@@ -272,10 +278,10 @@ const downloadReport = async (req, res) => {
       [userId]
     );
 
-    // ================= Build Workbook =================
+    // === Create Excel Workbook ===
     const workbook = new ExcelJS.Workbook();
 
-    // ---- Sheet 1: Detailed Expenses ----
+    // --- Sheet 1: Detailed Expenses ---
     const sheet1 = workbook.addWorksheet("Detailed Expenses");
     sheet1.columns = [
       { header: "Date", key: "date", width: 15 },
@@ -286,6 +292,7 @@ const downloadReport = async (req, res) => {
       { header: "Savings", key: "savings", width: 15 },
       { header: "Note", key: "note", width: 40 },
     ];
+
     rows.forEach((row) => {
       sheet1.addRow({
         date: new Date(row.date).toLocaleDateString(),
@@ -297,8 +304,14 @@ const downloadReport = async (req, res) => {
         note: row.note || "",
       });
     });
-    const totalIncome = rows.filter(r => r.type === "income").reduce((a, r) => a + Number(r.amount), 0);
-    const totalExpense = rows.filter(r => r.type === "expense").reduce((a, r) => a + Number(r.amount), 0);
+
+    const totalIncome = rows
+      .filter(r => r.type === "income")
+      .reduce((a, r) => a + Number(r.amount), 0);
+    const totalExpense = rows
+      .filter(r => r.type === "expense")
+      .reduce((a, r) => a + Number(r.amount), 0);
+
     sheet1.addRow({});
     sheet1.addRow({
       description: "TOTAL",
@@ -307,7 +320,7 @@ const downloadReport = async (req, res) => {
       savings: totalIncome - totalExpense,
     });
 
-    // ---- Sheet 2: Yearly Summary ----
+    // --- Sheet 2: Yearly Summary ---
     const sheet2 = workbook.addWorksheet("Yearly Summary");
     sheet2.columns = [
       { header: "Month", key: "month", width: 20 },
@@ -315,6 +328,7 @@ const downloadReport = async (req, res) => {
       { header: "Expense", key: "expense", width: 15 },
       { header: "Savings", key: "savings", width: 15 },
     ];
+
     yearly.forEach((row) => {
       sheet2.addRow({
         month: row.month,
@@ -323,6 +337,7 @@ const downloadReport = async (req, res) => {
         savings: Number(row.income) - Number(row.expense),
       });
     });
+
     const yearlyIncome = yearly.reduce((a, r) => a + Number(r.income), 0);
     const yearlyExpense = yearly.reduce((a, r) => a + Number(r.expense), 0);
     sheet2.addRow({});
@@ -333,12 +348,13 @@ const downloadReport = async (req, res) => {
       savings: yearlyIncome - yearlyExpense,
     });
 
-    // ---- Sheet 3: Notes ----
+    // --- Sheet 3: Notes ---
     const sheet3 = workbook.addWorksheet("Yearly Notes");
     sheet3.columns = [
       { header: "Date", key: "date", width: 20 },
       { header: "Note", key: "note", width: 50 },
     ];
+
     if (notes.length > 0) {
       notes.forEach((row) => {
         sheet3.addRow({
@@ -350,44 +366,36 @@ const downloadReport = async (req, res) => {
       sheet3.addRow({ date: "—", note: "No notes found" });
     }
 
-    // ================= Save Locally (for history) =================
-    const exportDir = path.join(__dirname, "../exports");
-    if (!fs.existsSync(exportDir)) {
-      fs.mkdirSync(exportDir);
-    }
+    console.log("All sheets filled");
 
-    const fileName = `expense-report-${Date.now()}.xlsx`;
-    const filePath = path.join(exportDir, fileName);
+    // === Generate buffer ===
+    const buffer = await workbook.xlsx.writeBuffer();
+    console.log("Excel buffer generated, size:", buffer.byteLength);
 
-    await workbook.xlsx.writeFile(filePath);
-
-    // ================= Save History Record =================
-    const s3Key = `reports/${fileName}`;        // future S3 key
-    const fileUrl = `/exports/${fileName}`;     // local URL (can serve this statically)
-
-    await db.query(
-      "INSERT INTO export_history (user_id, s3_key, url) VALUES (?, ?, ?)",
-      [userId, s3Key, fileUrl]
-    );
-
-    // ================= Also Download to Browser =================
-    res.setHeader(
-      "Content-Type",
+    // === Upload to S3 ===
+    const fileKey = `reports/user-${userId}-${Date.now()}.xlsx`;
+    const url = await uploadToS3(
+      buffer,
+      fileKey,
       "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     );
-    res.setHeader(
-      "Content-Disposition",
-      `attachment; filename=${fileName}`
+
+    // === Save history ===
+    await db.query(
+      "INSERT INTO export_history (user_id, s3_key, url) VALUES (?, ?, ?)",
+      [userId, fileKey, url]
     );
 
-    await workbook.xlsx.write(res);
-    res.end();
+    // === Respond with URL ===
+    res.json({ fileUrl: url });
+    console.log("Report uploaded to S3 and URL sent:", url);
 
   } catch (err) {
     console.error("Unexpected error in downloadReport:", err);
     res.status(500).json({ error: "Unexpected error" });
   }
 };
+
 
 
 // ================= Export History =================

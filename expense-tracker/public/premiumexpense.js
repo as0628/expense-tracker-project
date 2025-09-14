@@ -290,31 +290,29 @@ if (downloadBtn) {
   downloadBtn.addEventListener("click", async () => {
     const period = downloadBtn.dataset.period || "monthly";
     try {
+      // 1️⃣ Request the signed file URL from backend
       const res = await fetch(`${API_BASE_URL}/api/premiumexpenses/download?period=${period}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
-
-      const contentType = res.headers.get("Content-Type") || "";
-      if (res.ok && contentType.includes("application")) {
-        const blob = await res.blob();
-        const url = window.URL.createObjectURL(blob);
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `expense-report-${period}.xlsx`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-        return;
-      }
-
       const data = await res.json();
       if (!res.ok || !data.fileUrl) throw new Error("Download failed");
-      window.open(data.fileUrl, "_blank");
+
+      // 2️⃣ Trigger download directly using the signed URL
+      const a = document.createElement("a");
+      a.href = data.fileUrl;
+      a.download = `expense-report-${period}.xlsx`; // optional: browsers respect Content-Disposition too
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+
     } catch (err) {
       showNotification("Download failed", false);
+      console.error(err);
     }
   });
 }
+
+
 
 // ---------- Export History ----------
 async function loadExportHistory(page = 1) {
