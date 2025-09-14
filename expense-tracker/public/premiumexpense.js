@@ -265,8 +265,8 @@ async function loadReport(period) {
     const tr = document.createElement("tr");
     tr.innerHTML = `
       <td>${period.charAt(0).toUpperCase() + period.slice(1)}</td>
-      <td>£${Number(data.total_income || 0).toFixed(2)}</td>
-      <td>£${Number(data.total_expense || 0).toFixed(2)}</td>
+      <td>Rs.${Number(data.total_income || 0).toFixed(2)}</td>
+      <td>Rs.${Number(data.total_expense || 0).toFixed(2)}</td>
     `;
     reportBody.appendChild(tr);
 
