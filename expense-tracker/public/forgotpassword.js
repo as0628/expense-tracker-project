@@ -2,7 +2,17 @@ const form = document.getElementById("forgot-form");
 const messageDiv = document.getElementById("message");
 
 // Base URL of your server
-const BASE_URL = "http://3.109.48.147:3000";
+const BASE_URL = "http://3.109.48.147";
+
+// Function to generate random alphanumeric string
+function generateRandomId(length = 15) {
+  const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  let result = '';
+  for (let i = 0; i < length; i++) {
+    result += chars[Math.floor(Math.random() * chars.length)];
+  }
+  return result;
+}
 
 form.addEventListener("submit", (e) => {
   e.preventDefault();
@@ -14,8 +24,8 @@ form.addEventListener("submit", (e) => {
     return;
   }
 
-  // Generate a dummy reset ID
-  const dummyResetId = "dummy-reset-id";
+  // Generate a random reset ID
+  const dummyResetId = generateRandomId();
 
   // Construct the reset link
   const resetLink = `${BASE_URL}/password/resetpassword/${dummyResetId}`;
