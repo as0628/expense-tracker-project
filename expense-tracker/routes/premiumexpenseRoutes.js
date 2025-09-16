@@ -44,7 +44,7 @@ router.get("/leaderboard", auth, validatePagination, getLeaderboard);
 router.get("/history", auth, getExportHistory);
 
 // Expense update/delete (dynamic param must come last)
-router.put("/:id", auth, updatePremiumExpense);
+// router.put("/:id", auth, updatePremiumExpense);
 router.delete("/:id", auth, deletePremiumExpense);
 
 module.exports = router;

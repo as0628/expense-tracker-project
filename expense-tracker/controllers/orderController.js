@@ -5,22 +5,18 @@ const { createOrder, getPaymentStatus } = require("../services/cashfreeService.j
 const createPaymentOrder = async (req, res) => {
   try {
     const userId = req.user.id; 
-    const orderId = "order_" + Date.now();
+    const orderId = "order_" + Date.now();//generate a unique order id by combining "order_" with the current timestamp
     const amount = 499; // Premium price
-
     // Create order via Cashfree
     const order = await createOrder(orderId, amount, userId, "9999999999");
-
     if (!order || !order.payment_session_id) {
       return res.status(500).json({ success: false, error: "Failed to get payment session" });
     }
-
     // Insert order into DB
     await db.query(
       "INSERT INTO orders (orderId, amount, status, userId) VALUES (?, ?, ?, ?)",
       [orderId, amount, "PENDING", userId]
     );
-
     return res.json({
       success: true,
       message: "Order created successfully",
@@ -33,14 +29,12 @@ const createPaymentOrder = async (req, res) => {
   }
 };
 
-// ✅ Verify payment
+//  Verify payment
 const verifyPayment = async (req, res) => {
   try {
     const { orderId } = req.body;
     const userId = req.user.id;
-
     const payment = await getPaymentStatus(orderId);
-
     if (payment[0]?.payment_status === "SUCCESS") {
       // Update order status and user premium
       await db.query("UPDATE orders SET status = 'SUCCESS' WHERE orderId = ?", [orderId]);
@@ -61,7 +55,7 @@ const verifyPayment = async (req, res) => {
   }
 };
 
-// ✅ Get payment status by order ID
+//  Get payment status by order ID
 const getPaymentStatusById = async (req, res) => {
   const { orderId } = req.params;
   try {

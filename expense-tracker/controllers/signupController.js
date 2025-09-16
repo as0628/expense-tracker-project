@@ -2,7 +2,6 @@ const db = require('../config/db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 require("dotenv").config();
-
 const SECRET_KEY = process.env.SECRET_KEY || "defaultsecret";  // fallback
 
 // SIGNUP
@@ -12,8 +11,7 @@ const signup = async (req, res) => {
   if (!name || !email || !password) {
     return res.status(400).json({ error: 'All fields are required' });
   }
-
-  try {
+try {
     // Check if user exists
     const [existing] = await db.query(
       "SELECT * FROM signup WHERE email = ?", [email]
@@ -23,7 +21,7 @@ const signup = async (req, res) => {
     }
 
     // Hash password
-    const hashed = await bcrypt.hash(password, 10);
+    const hashed = await bcrypt.hash(password, 10);//salt is random data added to the password before hashing.
 
     // Insert user
     const [result] = await db.query(

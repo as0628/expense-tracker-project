@@ -1,6 +1,5 @@
 const { S3Client, PutObjectCommand, GetObjectCommand } = require("@aws-sdk/client-s3");
 const { getSignedUrl } = require("@aws-sdk/s3-request-presigner");
-
 const s3 = new S3Client({
   region: process.env.AWS_REGION,
   credentials: {
@@ -8,7 +7,6 @@ const s3 = new S3Client({
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
   },
 });
-
 async function uploadToS3(fileBuffer, key, contentType) {
   if (!Buffer.isBuffer(fileBuffer)) {
     throw new Error("fileBuffer must be a Node Buffer");

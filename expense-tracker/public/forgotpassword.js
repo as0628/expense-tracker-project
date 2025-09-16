@@ -5,7 +5,7 @@ const messageDiv = document.getElementById("message");
 const BASE_URL = "http://3.109.48.147";
 
 // Function to generate random alphanumeric string
-function generateRandomId(length = 15) {
+function generateRandomId(length = 30) {
   const chars = 'abcdefghijklmnopqrstuvwxyz0123456789';
   let result = '';
   for (let i = 0; i < length; i++) {
