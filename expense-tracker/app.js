@@ -5,32 +5,30 @@ const fs = require("fs");
 const path = require("path");
 require("dotenv").config();
 
-
 const signupRoutes = require("./routes/signupRoutes");
 const expenseRoutes = require("./routes/expenseRoutes");
 const orderRoutes = require("./routes/orderRoutes");
 const premiumexpenseRoutes = require("./routes/premiumexpenseRoutes");
 const passwordRoutes = require("./routes/passwordRoutes");
-const app = express();// Create an Express application instance
-
+const app = express();
 
 app.use(cors());
-app.use(express.json());// Parse incoming JSON request bodies
-app.use(express.urlencoded({ extended: true }));// Parse form data from requests
+app.use(express.json());// parses JSON from requests into JS objects.
+app.use(express.urlencoded({ extended: true }));//parses HTML form data into JS objects
 
 // Logging requests to access.log
 const accessLogStream = fs.createWriteStream(
   path.join(__dirname, "access.log"),
   { flags: "a" }
-);
-// Log requests to access.log in detailed format
+);//without these lines we wouldn’t have a saved record of server activity
+
 app.use(morgan("combined", { stream: accessLogStream }));
 
 // Serve static files
 app.use(express.static(path.join(__dirname, "public"))); // /public folder accessible at the root url
 app.use("/exports", express.static(path.join(__dirname, "exports"))); // /exports folder
 
-// ==================== Routes ====================
+//Routes
 app.use("/api/auth", signupRoutes);
 app.use("/api/expenses", expenseRoutes);
 app.use("/api/order", orderRoutes);
@@ -42,7 +40,7 @@ app.get("/", (req, res) => {
 });// Serve home.html at root URL
 
 // app.get("/health", (req, res) => {
-//   res.send("✅ Expense Tracker API is running");
+//   res.send(" Expense Tracker API is running");
 // });
 
 app.use((err, req, res, next) => {
@@ -53,6 +51,6 @@ app.use((err, req, res, next) => {
   });
 });// Handle errors and send JSON response
 
-// ==================== Start server ====================
+// Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));
