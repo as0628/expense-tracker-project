@@ -2,7 +2,7 @@
 const { DataTypes } = require('sequelize');
 const sequelize = require('../config/db');
 
-// Define model mapped to your existing 'expenses' table
+// Define model mapped to our existing 'expenses' table
 const Expense = sequelize.define('Expense', {
   id: { type: DataTypes.INTEGER, autoIncrement: true, primaryKey: true },
   amount: { type: DataTypes.FLOAT, allowNull: false },

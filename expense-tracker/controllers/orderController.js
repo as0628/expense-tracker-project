@@ -2,7 +2,7 @@ const Order = require('../models/orderModel');
 const Signup = require('../models/signupModel');
 const { createOrder, getPaymentStatus } = require("../services/cashfreeService.js");
 
-// ✅ Create payment order
+// Create payment order
 const createPaymentOrder = async (req, res) => {
   try {
     const userId = req.user.id;

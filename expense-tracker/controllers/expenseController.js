@@ -116,7 +116,7 @@ const getReport = async (req, res) => {
 // helper
 async function updateTotalExpense(userId, difference) {
   await Signup.increment('total_expense', { by: difference, where: { id: userId } });
-}
+}//Update user’s total expense (updateTotalExpense)
 
 module.exports = {
   getExpenses,

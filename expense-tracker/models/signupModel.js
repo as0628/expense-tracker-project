@@ -14,4 +14,4 @@ const Signup = sequelize.define('Signup', {
   timestamps: false    
 });
 
-module.exports = Signup;
+module.exports = Signup; 

@@ -16,8 +16,8 @@ const getPremiumExpenses = async (req, res) => {
     const { count: total, rows: expenses } = await Expense.findAndCountAll({
       where: { user_id: userId },
       order: [["created_at", "DESC"]],
-      limit,
-      offset,
+      limit,//how many rows to return
+      offset,//how many rows to skip before starting to return data
       attributes: ["id","amount","description","category","type","note","created_at"]
     });
 

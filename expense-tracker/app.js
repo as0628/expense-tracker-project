@@ -22,7 +22,7 @@ const accessLogStream = fs.createWriteStream(
   { flags: "a" }
 );//without these lines we wouldn’t have a saved record of server activity
 
-app.use(morgan("combined", { stream: accessLogStream }));
+app.use(morgan("combined", { stream: accessLogStream })); // Log requests to access.log in detailed format
 
 // Serve static files
 app.use(express.static(path.join(__dirname, "public"))); // /public folder accessible at the root url
